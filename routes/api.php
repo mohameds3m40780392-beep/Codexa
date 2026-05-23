@@ -6,7 +6,8 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Models\User;
-
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ProductController;
 /*
 
 |--------------------------------------------------------------------------
@@ -71,3 +72,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ], 200);
     });
 });
+
+// routes/api.php
+
+Route::apiResource('categories', CategoryController::class);
+Route::apiResource('products', ProductController::class);
