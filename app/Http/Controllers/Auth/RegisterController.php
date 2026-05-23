@@ -20,7 +20,7 @@ class RegisterController extends Controller
 
         // Check if the chosen role is admin
         if ($data['role'] === 'admin') {
-            $secretAdminCode = 'ADMIN_SECRET_2026'; 
+            $secretAdminCode = env('ADMIN_SECRET_CODE');
 
             if (empty($data['admin_code']) || $data['admin_code'] !== $secretAdminCode) {
                 throw ValidationException::withMessages([
