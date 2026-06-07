@@ -47,14 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
     /*
      * 1. مسارات الـ Admin فقط (ممنوع دخول الـ User العادي)
      */
-    Route::group(['middleware' => function (Request $request, $next) {
-        if ($request->user()->role !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized access. Admins only.'
-            ], 403);
-        }
-        return $next($request);
-    }], function () {
+    Route::group(['middleware' => \App\Http\Middleware\CheckIsAdmin::class], function () {
 
         // عمليات التحكم بالمنتجات (إضافة، تعديل، حذف)
         Route::post('/products', [ProductController::class, 'store']);
