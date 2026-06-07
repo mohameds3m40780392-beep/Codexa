@@ -18,7 +18,7 @@ class RegisterController extends Controller
     {
         $data = $request->validated();
 
-        // Check if the chosen role is admin
+        // 1. التحقق من كود الأدمن السري إذا تم اختيار صلاحية admin
         if ($data['role'] === 'admin') {
             $secretAdminCode = env('ADMIN_SECRET_CODE');
 
@@ -29,13 +29,13 @@ class RegisterController extends Controller
             }
         }
 
-        // Create the user or admin
-        $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role'     => $data['role'],
-        ]);
+        // 2. الطريقة الجديدة والآمنة لحفظ الصلاحية (role) دون أن يتجاهلها السيرفر
+        $user = new User();
+        $user->name = $data['name'];
+        $user->email = $data['email'];
+        $user->password = Hash::make($data['password']);
+        $user->role = $data['role']; // هنا سيتم إجبار السيرفر على حفظها كـ admin
+        $user->save();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

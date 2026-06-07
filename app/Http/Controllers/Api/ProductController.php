@@ -12,55 +12,79 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('category')->get();
+        $products = Product::with('category')->paginate(15);
         return response()->json($products);
     }
 
-    // Store a new product
     public function store(StoreProductRequest $request)
     {
-        $data = $request->validated();
+        try {
+            $data = $request->validated();
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('products', 'public');
+
+                if (!$path) {
+                    return response()->json(['message' => 'Image upload failed'], 500);
+                }
+
+                $data['image'] = $path;
+            }
+
+            $product = Product::create($data);
+
+            return response()->json($product->load('category'), 201);
+        } catch (\Exception $e) {
+            // تم نقل سطر طباعة الخطأ الحقيقي إلى مكانه الصحيح هنا لتكتشف سبب المشكلة
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        $product = Product::create($data);
-        return response()->json($product->load('category'), 201);
     }
 
-    // Show a single product with its category
     public function show(Product $product)
     {
         return response()->json($product->load('category'));
     }
 
-    // Update the product
     public function update(UpdateProductRequest $request, Product $product)
     {
-        $data = $request->validated();
+        try {
+            $data = $request->validated();
 
-        if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+            if ($request->hasFile('image')) {
+                if ($product->image && Storage::disk('public')->exists($product->image)) {
+                    Storage::disk('public')->delete($product->image);
+                }
+
+                $path = $request->file('image')->store('products', 'public');
+
+                if (!$path) {
+                    return response()->json(['message' => 'Image upload failed'], 500);
+                }
+
+                $data['image'] = $path;
             }
-            $data['image'] = $request->file('image')->store('products', 'public');
-        }
 
-        //u pdate the product
-        $product->update($data);
-        return response()->json($product->load('category'));
+            $product->update($data);
+
+            return response()->json($product->load('category'));
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Something went wrong'], 500);
+        }
     }
 
-    // Soft delete the product
     public function destroy(Product $product)
     {
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
+        try {
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
 
-        //delete the product
-        $product->delete();
-        return response()->json(['message' => 'Deleted successfully']);
+            $product->delete();
+
+            return response()->noContent(); // 204
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Something went wrong'], 500);
+        }
     }
 }
