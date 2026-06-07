@@ -3,21 +3,41 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Category;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
-    protected $fillable = ['name', 'description', 'price', 'quantity', 'image', 'category_id'];
+    protected $fillable = [
+        'name',
+        'description',
+        'price',
+        'discount',
+        'quantity',
+        'image', // العمود الأساسي في قاعدة البيانات
+        'category_id'
+    ];
 
-    public function category(): BelongsTo
+    // لتضمين الرابط الكامل تلقائياً عند جلب البيانات عبر الـ API
+    protected $appends = ['image_url'];
+
+    /**
+     * الـ Accessor المسؤول عن إنشاء رابط الصورة الكامل
+     */
+    public function getImageUrlAttribute()
     {
-        return $this->belongsTo(Category::class);
+        // إذا كان الحقل يحتوي على قيمة، يرجع الرابط الكامل، وإلا يرجع null
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+
+        return null;
     }
 
-    //url accessor for product image
-    public function getImageUrlAttribute(): ?string
+    /**
+     * علاقة المنتج بالقسم
+     */
+    public function category()
     {
-        return $this->image ? asset('storage/' . $this->image) : null;
+        return $this->belongsTo(Category::class);
     }
 }

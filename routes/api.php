@@ -8,72 +8,93 @@ use App\Http\Controllers\Auth\ProfileController;
 use App\Models\User;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\CartItemsController;
+use App\Http\Controllers\Api\OrderController;
+
 /*
 
 |--------------------------------------------------------------------------
-| Public Routes
+| Public Routes (متاحة للجميع بدون تسجيل دخول)
 |--------------------------------------------------------------------------
 */
 
-// Register a new user
+// Register & Login
 Route::post('/register', [RegisterController::class, 'create']);
-
-// Login user and issue token
 Route::post('/login', [LoginController::class, 'store']);
 
+// تصفح المنتجات والأقسام (رؤية فقط)
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{category}', [CategoryController::class, 'show']);
+
+// Get any user info by ID
+Route::get('/user/{id}', function ($id) {
+    return response()->json([
+        'user' => User::findOrFail($id)
+    ], 200);
+});
+
+
 /*
 
 |--------------------------------------------------------------------------
-| Protected Routes (Sanctum Authentication)
+| Protected Routes (Sanctum Authentication - تحتاج توكين)
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Log out user and revoke token
+    /*
+     * 1. مسارات الـ Admin فقط (ممنوع دخول الـ User العادي)
+     */
+    Route::group(['middleware' => function (Request $request, $next) {
+        if ($request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Unauthorized access. Admins only.'
+            ], 403);
+        }
+        return $next($request);
+    }], function () {
+
+        // عمليات التحكم بالمنتجات (إضافة، تعديل، حذف)
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::put('/products/{product}', [ProductController::class, 'update']);
+        Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+
+        // عمليات التحكم بالأقسام (إضافة، تعديل، حذف)
+        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::put('/categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
+        // لوحة تحكم الإدارة
+        Route::get('/admin/dashboard', function () {
+            return response()->json([
+                'message' => 'Welcome to the Admin control panel.'
+            ], 200);
+        });
+    });
+
+    /*
+     * 2. مسارات الـ User العادي والـ Admin معاً
+     */
     Route::post('/logout', [LoginController::class, 'logout']);
 
-    // Access user dashboard
     Route::get('/dashboard', function () {
         return response()->json([
             'message' => 'Welcome to your dashboard.'
         ], 200);
     });
 
-    // Get any user info by ID
-    Route::get('/user/{id}', function ($id) {
-        return response()->json([
-            'user' => User::findOrFail($id)
-        ], 200);
-    });
-
-    // View current user profile
+    // User Profile
     Route::get('/profile', [ProfileController::class, 'show']);
-
-    // Update profile info and avatar
     Route::post('/profile', [ProfileController::class, 'update']);
 
-    // Access protected shopping cart
-    Route::get('/cart', function () {
-        return response()->json([
-            'message' => 'Welcome to your protected shopping cart.'
-        ], 200);
-    });
+    // Shopping Cart Actions
+    Route::get('/cart', [CartItemsController::class, 'getCart']);
+    Route::post('/cart/add', [CartItemsController::class, 'AddToCart']);
+    Route::post('/cart/remove', [CartItemsController::class, 'RemoveFromCart']);
+    Route::post('/cart/update', [CartItemsController::class, 'UpdateCart']);
 
-    // Access admin control panel
-    Route::get('/admin/dashboard', function (Request $request) {
-        if ($request->user()->role !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized access.'
-            ], 403);
-        }
-        return response()->json([
-            'message' => 'Welcome to the Admin control panel.'
-        ], 200);
-    });
+    // Checkout
+    Route::post('/checkout', [OrderController::class, 'checkout']);
 });
-
-// routes/api.php
-
-Route::apiResource('categories', CategoryController::class);
-Route::apiResource('products', ProductController::class);
